@@ -48,6 +48,7 @@
 -(id)init {
     
     if ([super init]) {
+        self.preGenObjectID = [self uuidString];
     }
     return self;
 }
@@ -79,6 +80,7 @@
         // get class name and table name :
         [self SQPClassOfObject:self];
         
+        NSArray* array = self.SQPProperties;
         // Check id entity already scanned :
         self.SQPProperties = [[SQPDatabase sharedInstance] getExistingEntity:self.SQPClassName];
         
@@ -88,6 +90,10 @@
             // Properties analyse :
             self.SQPProperties = [NSArray arrayWithArray:[self SQPAnalyseProperties]];
             
+            self.SQPProperties = [self.SQPProperties arrayByAddingObjectsFromArray:array];
+            //NSMutableArray* arr = [[[NSMutableArray alloc] initWithArray:array] arrayByAddingObjectsFromArray:self.SQPProperties];
+            
+            //self.SQPProperties = arr;
             // Save the entity model :
             [[SQPDatabase sharedInstance] addScannedEntity:self.SQPClassName andProperties:self.SQPProperties];
         }
@@ -132,6 +138,8 @@
         
         id propertyValue = [self valueForKey:(NSString *)propertyName];
         
+        
+        
         SQPProperty *prop = [[SQPProperty alloc] init];
         [prop getPropertyType:property_getAttributes(property)];
         prop.name = propertyName;
@@ -149,7 +157,7 @@
                     [[SQPDatabase sharedInstance] addEntityObjectName:prop.complexTypeName];
                 }
             }
-     
+            
         }
         
         if ([SQPDatabase sharedInstance].logPropertyScan == YES) {
@@ -202,9 +210,8 @@
                                     prop.type = kPropertyTypeString;
                                     prop.isCompatibleType = YES;
                                     prop.name = foreignKeyName;
-                                    prop.value = self.objectID;
+                                    prop.value = self.preGenObjectID;
                                     prop.isForeignKey = YES;
-                                    
                                     
                                     [props addObject:prop];
                                     sqpObject.SQPProperties = props;
@@ -231,7 +238,7 @@
         
         // If table not exists :
         if ([db tableExists:self.SQPTableName] == NO) {
- 
+            
             NSMutableString *sqlColumns = [[NSMutableString alloc] initWithFormat:@"%@ TEXT", kSQPObjectIDName];
             
             // for each property :
@@ -254,7 +261,7 @@
                 NSLog(@"%@", [db lastErrorMessage]);
             }
             
-        // Add missing column (if option enable) :
+            // Add missing column (if option enable) :
         } else if ([SQPDatabase sharedInstance].addMissingColumns == YES) {
             
             // Table current schema :
@@ -302,7 +309,7 @@
         FMDatabase *db = [[SQPDatabase sharedInstance] database];
         
         if ([db tableExists:self.SQPTableName] == YES) {
-        
+            
             NSMutableString *sql = [[NSMutableString alloc] initWithFormat:@"ALTER TABLE %@ ADD COLUMN %@ %@", tableName, column.name, [column getSQLiteType]];
             
             // Log SQL request :
@@ -366,7 +373,7 @@
  *  @return Return YES if the changes apply with succes.
  */
 - (BOOL)SQPDeleteEntity {
-
+    
     return [self SQPDeleteEntityWithCascade:NO];
 }
 
@@ -422,7 +429,7 @@
                     }
                 }
                 
-            // If Object :
+                // If Object :
             } else if (property.type == kPropertyTypeObject) {
                 
                 NSObject *item = (NSObject*)[self valueForKey:property.name];
@@ -438,7 +445,6 @@
                         [sqpObject SQPSaveEntityWithCascade:cascade];
                     }
                 }
-                
             }
         }
     }
@@ -454,7 +460,7 @@
 - (id)objcObjectToSQLite:(id)value {
     
     if (value == nil) {
-    
+        
         return [NSNull null];
         
     } else {
@@ -480,15 +486,15 @@
             
             NSURL *url = (NSURL*)value;
             NSString *urlString = [url absoluteString];
-
+            
             return urlString;
             
         } else if ([value isKindOfClass:[SQPObject class]]) {
-
+            
             SQPObject *sqpObject = (SQPObject*)value;
             
             if (sqpObject.objectID == nil) [sqpObject SQPSaveEntity];
-
+            
             NSString *objectID = sqpObject.objectID;
             
             return objectID;
@@ -530,7 +536,11 @@
             }
             
             // get property value :
-            id propertyValue = [self valueForKey:property.name];
+            id propertyValue = nil;
+            if(property.isForeignKey)
+                propertyValue = property.value;
+            else
+                propertyValue = [self valueForKey:property.name];
             
             // Convert ObjC value to SQLite :
             id sqliteValue = [self objcObjectToSQLite:propertyValue];
@@ -545,6 +555,7 @@
             [argsDict setObject:sqliteValue forKey:property.name];
         }
     }
+    
     
     // Object ID (UUID) :
     NSString *udid = [self uuidString];
@@ -563,7 +574,7 @@
     BOOL result = [db executeUpdate:sql withParameterDictionary:argsDict];
     
     if (result == YES) {
-        self.objectID = udid;
+        self.preGenObjectID = self.objectID = udid;
     }
     
     return result;
@@ -575,7 +586,7 @@
  *  @return Result of Update (YES = succes).
  */
 - (BOOL)SQPUpdateObject {
-
+    
     FMDatabase *db = [[SQPDatabase sharedInstance] database];
     
     NSMutableDictionary *argsDict = [[NSMutableDictionary alloc] init];
@@ -595,7 +606,13 @@
             }
             
             // get property value :
-            id propertyValue = [self valueForKey:property.name];
+            id propertyValue = nil;
+            
+            if(property.isForeignKey)
+                propertyValue = property.value;
+            else
+                propertyValue = [self valueForKey:property.name];
+            
             
             // Convert ObjC value to SQLite :
             id sqliteValue = [self objcObjectToSQLite:propertyValue];
@@ -609,8 +626,12 @@
             // Add to dictionary :
             [argsDict setObject:sqliteValue forKey:property.name];
         }
+        /*else if (property.type == kPropertyTypeArray || property.type == kPropertyTypeMutableArray) {
+         //if its an array then its obviously a child collecction
+         //so lets find out the object type and create a table for it
+         }*/
     }
-
+    
     [sql appendFormat:@"%@ WHERE %@ = '%@'", sqlArgs, kSQPObjectIDName, self.objectID];
     
     // Log SQL request :
@@ -698,10 +719,10 @@
  *  @return Array of entities.
  */
 + (NSMutableArray*)SQPFetchAllWhere:(NSString*)queryOptions orderBy:(NSString*)orderOptions {
-  
+    
     NSString *className = NSStringFromClass([self class]);
     NSString *tableName = [NSString stringWithFormat:@"%@%@", kSQPTablePrefix, className];
-
+    
     return [SQPObject SQPFetchAllForTable:tableName andClassName:className Where:queryOptions groupBy:nil orderBy:orderOptions pageIndex:0 itemsPerPage:0];
 }
 
@@ -768,7 +789,7 @@
     if (groupOptions != nil) [sql appendFormat:@" GROUP BY %@", groupOptions];
     
     if (orderOptions != nil) [sql appendFormat:@" ORDER BY %@", orderOptions];
-   
+    
     if (itemsPerPage > 0) {
         NSInteger offset = (pageIndex) * itemsPerPage;
         [sql appendFormat:@" LIMIT %li, %li", (long)offset, (long)itemsPerPage];
@@ -941,7 +962,7 @@
     FMDatabase *db = [[SQPDatabase sharedInstance] database];
     
     NSString *sql = [NSString stringWithFormat:@"SELECT COUNT(*) AS total_entities FROM %@ WHERE %@", tableName, queryOptions];
-  
+    
     // Log SQL request :
     if ([SQPDatabase sharedInstance].logRequests) {
         [SQPObject logRequest:sql];
@@ -1045,8 +1066,9 @@
                     [self setValue:finalObject forKey:property.name];
                     
                 } else if ([value isKindOfClass:[NSNull class]] == NO) {
-
-                    [self setValue:value forKey:property.name];
+                    
+                    if(!property.isForeignKey)
+                        [self setValue:value forKey:property.name];
                 }
                 
             }
@@ -1085,10 +1107,9 @@
                 }
             }
         }
-     
     }
     
-    self.objectID = [resultSet stringForColumn:kSQPObjectIDName];
+    self.preGenObjectID = self.objectID = [resultSet stringForColumn:kSQPObjectIDName];
 }
 
 /**
@@ -1108,12 +1129,16 @@
  *  @return Unique identifier.
  */
 - (NSString *)uuidString {
-
+    
+    if(self.preGenObjectID) return self.preGenObjectID;
+    
     CFUUIDRef uuid = CFUUIDCreate(kCFAllocatorDefault);
     NSString *uuidString = (__bridge_transfer NSString *)CFUUIDCreateString(kCFAllocatorDefault, uuid);
     CFRelease(uuid);
     
-    return uuidString;
+    self.preGenObjectID = uuidString;
+    
+    return self.preGenObjectID;
 }
 
 /**
@@ -1128,7 +1153,7 @@
     Class theClass = NSClassFromString(className);
     
     SQPObject *object = (SQPObject*)[[theClass alloc] init];
- 
+    
     return object;
 }
 

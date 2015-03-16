@@ -58,6 +58,11 @@
 @property (nonatomic, strong) NSString *objectID;
 
 /**
+ *  Unique entity object identifier.
+ */
+@property (nonatomic, strong) NSString *preGenObjectID;
+
+/**
  *  Set at YES, if you want remove the entity object.
  *  Need to call the SQPSaveEntity method to apply de DELETE SQL order.
  */
@@ -80,7 +85,7 @@
 - (BOOL)SQPSaveEntity;
 
 /**
-  *  Save the modification of the entity object.
+ *  Save the modification of the entity object.
  *
  *  @param cascade Save children object in cascade.
  *
