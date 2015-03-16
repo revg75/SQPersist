@@ -116,6 +116,26 @@ Children entities
 -----------------
 If your object contains some properties of ***SQPObject*** type, or ***NSArray*** of SQPObject. The children objects will be save too, when you call the method ***SQPSaveEntity*** of the main object.
 
+If you need your object to contain a property of type NSArray which needs to be stored as a one to many relationship with your object then you MUST name your property with the prefix own. So for example
+
+If you have an object User which can have many Cars you would create two models
+User and Car
+
+Your User model would need a property declared with the prefix own like so
+
+#import "SQPObject.h"
+
+@class Car;
+
+@interface User : SQPObject
+@property (nonatomic, strong) NSMutableArray* ownCar;
+
+@end
+
+If you store objects of type Car in the ownCar array they will be stored in a table with a foreign key relating the User object so that upon retreival of a particular user object it will load this array
+with all cars that the user owns. It does this automatically as long as you name your array property with prefix own.
+
+
 Manipulate the objects
 ----------------------
 

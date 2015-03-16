@@ -15,6 +15,7 @@
 @interface SQPObject ()
 - (void)completeWithResultSet:(FMResultSet*)resultSet;
 - (void)SQPCreateTable;
+- (void)SQPCreateForeignKeys;
 - (void)SQPAddColumn:(SQPProperty*)column intoTable:(NSString*)tableName;
 - (void)SQPInitialization;
 - (NSMutableArray *)SQPAnalyseProperties;
@@ -92,6 +93,9 @@
         }
     }
     
+    // Check if foreign keys needed
+    [self SQPCreateForeignKeys];
+    
     // Create table into database :
     [self SQPCreateTable];
 }
@@ -158,6 +162,60 @@
     free(properties);
     
     return props;
+}
+
+#pragma mark - Create Foreign Keys
+/**
+ *  Create any foreign keys needed for the table of entity object into the database (private method).
+ */
+- (void)SQPCreateForeignKeys {
+    
+    if (self.SQPProperties != nil) {
+        
+        for (SQPProperty *property in self.SQPProperties) {
+            
+            // If Array ADD child objects are SQPObject then we need to add foreign key
+            if (property.type == kPropertyTypeArray || property.type == kPropertyTypeMutableArray) {
+                
+                // If the array property name begins with own we have a delibrate indication
+                // that we have a collection of SQPObject objects to associate with table
+                if([property.name rangeOfString:@"own"].location == 0){
+                    
+                    NSArray *items = (NSArray*)[self valueForKey:property.name];
+                    
+                    if (items != nil) {
+                        
+                        if ([items isKindOfClass:[NSArray class]] || [items isKindOfClass:[NSMutableArray class]]) {
+                            
+                            for (NSObject *item in items) {
+                                
+                                if ([item isKindOfClass:[SQPObject class]]) {
+                                    
+                                    SQPObject *sqpObject = (SQPObject*)item;
+                                    
+                                    // generate foreign key name
+                                    NSString *foreignKeyName = [NSString stringWithFormat:@"%@_objectID", NSStringFromClass(self.class)];
+                                    NSMutableArray *props = [NSMutableArray arrayWithArray:sqpObject.SQPProperties];
+                                    
+                                    // add foreign key property to object
+                                    SQPProperty *prop = [[SQPProperty alloc] init];
+                                    prop.type = kPropertyTypeString;
+                                    prop.isCompatibleType = YES;
+                                    prop.name = foreignKeyName;
+                                    prop.value = self.objectID;
+                                    prop.isForeignKey = YES;
+                                    
+                                    
+                                    [props addObject:prop];
+                                    sqpObject.SQPProperties = props;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 #pragma mark - Create table
@@ -993,6 +1051,39 @@
                 
             }
             
+        }
+        else if(property.type == kPropertyTypeMutableArray || property.type == kPropertyTypeArray)
+        {
+            // if array property begins with own we know its been deliberately
+            // setup to store an array of associated objects as a 1 to many relationship
+            if([property.name rangeOfString:@"own"].location == 0){
+                
+                // Extract class name of child objects based on name of property
+                NSString *classname = [property.name stringByReplacingOccurrencesOfString:@"own" withString:@""];
+                SQPObject *obj = [SQPObject SQPObjectFromClassName:classname];
+                
+                // If there is a class created for this extracted class name then we are ok
+                if(obj!=nil){
+                    NSString *className = NSStringFromClass([obj class]);
+                    
+                    // get all objects that belong to this object
+                    NSString *foreignKeyName = [NSString stringWithFormat:@"%@_objectID", NSStringFromClass(self.class)];
+                    
+                    // get tablename for the extracted class
+                    NSString *tableName = [NSString stringWithFormat:@"%@%@", kSQPTablePrefix, className];
+                    
+                    // grab all objects that are linked to this object's objectID
+                    NSString *queryOption = [NSString stringWithFormat:@"%@ = '%@'", foreignKeyName, [resultSet stringForColumn:kSQPObjectIDName]];
+                    NSMutableArray *array = [SQPObject SQPFetchAllForTable:tableName andClassName:className Where:queryOption groupBy:nil orderBy:nil pageIndex:0 itemsPerPage:0];
+                    
+                    [self setValue:array forKey:property.name];
+                }
+                else{
+                    //we have no class name for extracted class
+                    //NSAssert(obj==nil, @"No class found for %@", classname);
+                    NSLog(@"Warning: No class found with name (%@) for collection %@. You need to create a Model with class name %@ that inherits from SQPObject to take advantage of automatic 1 to many relationship features.", classname, property.name, classname);
+                }
+            }
         }
      
     }

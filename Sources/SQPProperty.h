@@ -69,6 +69,11 @@ typedef enum SQPPropertyType : NSUInteger {
 @property (nonatomic) BOOL isSQPObject;
 
 /**
+ *  Indicate that the property is a SQPObject type (entity object).
+ */
+@property (nonatomic) BOOL isForeignKey;
+
+/**
  *  Indicate if the property is compatible for storage in SQLite database.
  */
 @property (nonatomic) BOOL isCompatibleType;

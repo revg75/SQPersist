@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>D5D48A31-10ED-4310-A7C0-D529BF7EDD01</string>
+	<key>IDESourceControlProjectName</key>
+	<string>SQPersist</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>4EA19567715E7DF8F7C1518F8AFBE30BBE639684</key>
+		<string>https://github.com/revg75/SQPersist.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>SQPersist.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>4EA19567715E7DF8F7C1518F8AFBE30BBE639684</key>
+		<string>../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/revg75/SQPersist.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>4EA19567715E7DF8F7C1518F8AFBE30BBE639684</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>4EA19567715E7DF8F7C1518F8AFBE30BBE639684</string>
+			<key>IDESourceControlWCCName</key>
+			<string>SQPersist</string>
+		</dict>
+	</array>
+</dict>
+</plist>
