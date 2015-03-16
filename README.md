@@ -122,7 +122,7 @@ If you have an object User which can have many Cars you would create two models
 User and Car
 
 Your User model would need a property declared with the prefix own like so
-
+```
 #import "SQPObject.h"
 
 @class Car;
@@ -131,7 +131,7 @@ Your User model would need a property declared with the prefix own like so
 @property (nonatomic, strong) NSMutableArray* ownCar;
 
 @end
-
+```
 If you store objects of type Car in the ownCar array they will be stored in a table with a foreign key relating the User object so that upon retreival of a particular user object it will load this array
 with all cars that the user owns. It does this automatically as long as you name your array property with prefix own.
 
